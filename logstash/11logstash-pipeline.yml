@@ -109,6 +109,36 @@ data:
           }
         }
       }
+  flat_covid_screening.conf: |-
+    input {
+      jdbc {
+        jdbc_driver_library => "/usr/share/logstash/config/mysql-connector-java-5.1.48-bin.jar"
+        jdbc_driver_class => "com.mysql.jdbc.Driver"
+        jdbc_connection_string => "jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/etl?autoReconnect=true&zeroDateTimeBehavior=convertToNull"
+        jdbc_validate_connection => true
+        jdbc_user => "${MYSQL_USER}"
+        jdbc_password => "${MYSQL_PASSWORD}"
+        jdbc_paging_enabled => true
+        jdbc_page_size => 500000
+        schedule => "* * * * *"
+        statement => "select * from flat_covid_screening where date_created > :sql_last_value"
+        last_run_metadata_path => "/tmp/last_run/.jdbc_flat_covid_screening_last_run"
+        use_column_value => true
+        tracking_column => date_created
+        tracking_column_type => "timestamp"
+        tags => "flat_covid_screening"
+        codec => json
+        }
+      }
+      output {
+        if "flat_covid_screening" in [tags]{
+          elasticsearch {
+            hosts => "http://elasticsearch.elk:9200"
+            index => "jdbc_flat_covid_screening"
+            document_id => "%{encounter_id}"
+          }
+        }
+      }
   flat_vitals.conf: |-
     input {
       jdbc {
